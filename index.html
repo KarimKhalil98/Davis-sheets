@@ -3,244 +3,153 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Employee Work Log</title>
+    <title>Work Log Submission</title>
     <style>
-        .work-log {
-            margin-bottom: 20px;
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
         }
-        .day-entry {
+        h1, h2 {
+            color: #333;
+        }
+        label {
+            display: block;
+            margin: 10px 0 5px;
+        }
+        input {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+        }
+        button {
+            padding: 10px 15px;
+            color: white;
+            background-color: #007bff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .day-input {
             margin: 10px 0;
         }
     </style>
 </head>
 <body>
-    <h2>Employee Work Log Submission</h2>
+    <h1>Work Log Submission</h1>
 
-    <!-- Employee Work Log Form -->
-    <form id="initialForm">
+    <form id="logForm">
         <label for="name">Name:</label>
-        <input type="text" id="name" required><br><br>
+        <input type="text" id="name" required>
 
-        <label for="workOrder">Work Order #:</label>
-        <input type="text" id="workOrder" required><br><br>
+        <label for="wo_number">Work Order Number:</label>
+        <input type="text" id="wo_number" required>
 
-        <label for="ticketNumber">Ticket #:</label>
-        <input type="text" id="ticketNumber" required><br><br>
+        <label for="ticket_number">Ticket Number:</label>
+        <input type="text" id="ticket_number" required>
 
-        <label for="startDate">Select Week Start Date:</label>
-        <input type="date" id="startDate" required><br><br>
+        <label for="week_start">Week Start (YYYY-MM-DD):</label>
+        <input type="date" id="week_start" required>
 
-        <label for="endDate">Select Week End Date:</label>
-        <input type="date" id="endDate" required><br><br>
+        <label for="week_end">Week End (YYYY-MM-DD):</label>
+        <input type="date" id="week_end" required>
 
-        <button type="button" onclick="generateDayInputs()">Continue</button>
+        <button type="submit">Submit</button>
     </form>
 
-    <form id="workForm" style="display:none;">
-        <h3>Record Hours Worked for the Selected Week</h3>
-        <div id="daysContainer"></div>
-        <input type="submit" value="Submit Work Log">
+    <h2>Administrator Password Setup</h2>
+    <form id="adminForm">
+        <label for="admin_password">Set Admin Password:</label>
+        <input type="password" id="admin_password" required>
+        <button type="submit">Set Password</button>
     </form>
 
-    <div id="message"></div>
-
-    <!-- Admin Search Form -->
-    <h2>Administrator Search</h2>
-    <form id="searchForm">
-        <label for="adminName">Enter Employee Name:</label>
-        <input type="text" id="adminName" required><br><br>
-
-        <label for="password">Enter Admin Password:</label>
-        <input type="password" id="password" required><br><br>
-
-        <button type="button" onclick="searchLogs()">Search Logs</button>
-    </form>
-
-    <div id="searchResults"></div>
+    <div id="daysContainer"></div>
 
     <script>
-        function generateDayInputs() {
-            const startDate = new Date(document.getElementById("startDate").value);
-            const endDate = new Date(document.getElementById("endDate").value);
-            const daysContainer = document.getElementById("daysContainer");
-            daysContainer.innerHTML = ""; // Clear previous entries
+        const logForm = document.getElementById('logForm');
+        const adminForm = document.getElementById('adminForm');
 
-            if (startDate && endDate && startDate <= endDate) {
-                let currentDate = startDate;
-                while (currentDate <= endDate) {
-                    const dayEntry = document.createElement("div");
-                    dayEntry.className = "day-entry";
+        logForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
 
-                    const formattedDate = currentDate.toISOString().split('T')[0];
+            const name = document.getElementById('name').value;
+            const wo_number = document.getElementById('wo_number').value;
+            const ticket_number = document.getElementById('ticket_number').value;
+            const week_start = document.getElementById('week_start').value;
+            const week_end = document.getElementById('week_end').value;
 
-                    dayEntry.innerHTML = `
-                        <label>${formattedDate}:</label>
-                        <input type="number" class="hours" placeholder="Hours worked">
-                        <label>
-                            <input type="checkbox" class="not-applicable" onchange="toggleHoursInput(this)"> Not Applicable
-                        </label>
-                    `;
-                    daysContainer.appendChild(dayEntry);
-                    currentDate.setDate(currentDate.getDate() + 1); // Move to the next day
-                }
+            const daysContainer = document.getElementById('daysContainer');
+            daysContainer.innerHTML = ''; // Clear previous days
 
-                document.getElementById("workForm").style.display = "block";
-                document.getElementById("initialForm").style.display = "none"; // Hide initial form
-            }
-        }
-
-        function toggleHoursInput(checkbox) {
-            const hoursInput = checkbox.parentNode.previousElementSibling;
-            hoursInput.disabled = checkbox.checked; // Disable hours input if "Not Applicable" is checked
-        }
-
-        document.getElementById("workForm").onsubmit = function(event) {
-            event.preventDefault(); // Prevent default form submission
-
-            const workLogs = [];
-            const name = document.getElementById("name").value;
-            const workOrder = document.getElementById("workOrder").value;
-            const ticketNumber = document.getElementById("ticketNumber").value;
-            const houseInputs = document.querySelectorAll('.hours');
-
-            houseInputs.forEach(input => {
-                const date = input.previousElementSibling.innerText; // Get the date label
-                const notApplicable = input.nextElementSibling.firstChild.checked;
-                const hours = notApplicable ? 'Not Applicable' : input.value;
-
-                workLogs.push({ date, hours });
+            const dates = getDates(week_start, week_end);
+            dates.forEach(date => {
+                const div = document.createElement('div');
+                div.className = 'day-input';
+                div.innerHTML = `
+                    <label>${date}:</label>
+                    <input type="number" min="0" placeholder="Hours Worked">
+                    <input type="checkbox"> Not Applicable
+                `;
+                daysContainer.appendChild(div);
             });
 
-            const payload = {
-                name,
-                workOrder,
-                ticketNumber,
-                logs: workLogs
-            };
+            // After adding days, submit the form
+            const hours = Array.from(daysContainer.querySelectorAll('input[type="number"]')).map(input => input.value);
+            const notApplicable = Array.from(daysContainer.querySelectorAll('input[type="checkbox"]')).map(input => input.checked);
 
-            // Send data to Flask backend
-            fetch('http://localhost:5000/add_work_logs', {
+            const response = await fetch('/submit', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify(payload)
-            })
-            .then(response => response.json())
-            .then(data => {
-                document.getElementById("message").innerText = data.message;
-                document.getElementById("workForm").reset();
-                document.getElementById("daysContainer").innerHTML = "";
-                document.getElementById("workForm").style.display = "none";
-                document.getElementById("initialForm").reset();
-                document.getElementById("initialForm").style.display = "block";
-            })
-            .catch(error => {
-                document.getElementById("message").innerText = "An error occurred. Please try again.";
-            });
-        };
-
-        function searchLogs() {
-            const adminName = document.getElementById("adminName").value;
-            const password = document.getElementById("password").value;
-
-            if (password === 'admin123') { // Example password check
-                fetch('http://localhost:5000/get_logs')
-                .then(response => response.json())
-                .then(data => {
-                    const filteredLogs = data.filter(log => log.name.toLowerCase() === adminName.toLowerCase());
-                    if (filteredLogs.length > 0) {
-                        let resultHTML = '<h3>Work Logs</h3>';
-                        filteredLogs.forEach(log => {
-                            resultHTML += `<p><strong>Name:</strong> ${log.name}</p>`;
-                            resultHTML += `<p><strong>Work Order:</strong> ${log.workOrder}</p>`;
-                            resultHTML += `<p><strong>Ticket Number:</strong> ${log.ticketNumber}</p>`;
-                            resultHTML += '<ul>';
-                            log.logs.forEach(entry => {
-                                resultHTML += `<li>${entry.date}: ${entry.hours}</li>`;
-                            });
-                            resultHTML += '</ul>';
-                        });
-                        document.getElementById("searchResults").innerHTML = resultHTML;
-                    } else {
-                        document.getElementById("searchResults").innerHTML = '<p>No logs found for this employee.</p>';
-                    }
+                body: JSON.stringify({
+                    name,
+                    wo_number,
+                    ticket_number,
+                    week_start,
+                    week_end,
+                    hours,
+                    not_applicable: notApplicable
                 })
-                .catch(error => {
-                    document.getElementById("searchResults").innerText = "An error occurred during search.";
-                });
-            } else {
-                document.getElementById("searchResults").innerText = "Incorrect password.";
+            });
+
+            const result = await response.json();
+            alert(result.message);
+        });
+
+        adminForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const password = document.getElementById('admin_password').value;
+
+            const response = await fetch('/set_admin_password', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ password })
+            });
+
+            const result = await response.json();
+            alert(result.message);
+        });
+
+        function getDates(startDate, endDate) {
+            const start = new Date(startDate);
+            const end = new Date(endDate);
+            const dates = [];
+
+            for (let dt = start; dt <= end; dt.setDate(dt.getDate() + 1)) {
+                dates.push(new Date(dt).toISOString().split('T')[0]);
             }
+
+            return dates;
         }
     </script>
 </body>
 </html>
-<style>
-  body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 20px;
-      background-color: #f4f4f4;
-  }
-
-  .container {
-      max-width: 600px;
-      margin: 0 auto;
-      background-color: #fff;
-      padding: 20px;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-      border-radius: 8px;
-  }
-
-  input[type="text"], input[type="number"], select {
-      width: 100%;
-      padding: 10px;
-      margin: 5px 0;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-  }
-
-  button {
-      background-color: #4CAF50;
-      color: white;
-      padding: 10px 15px;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 16px;
-  }
-
-  button:hover {
-      background-color: #45a049;
-  }
-
-  .days {
-      margin-top: 20px;
-  }
-
-  .day-entry {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 10px;
-  }
-
-  @media screen and (max-width: 600px) {
-      .day-entry {
-          flex-direction: column;
-          align-items: flex-start;
-      }
-  }
-
-  .message {
-      margin-top: 10px;
-      font-size: 16px;
-      color: green;
-  }
-</style>
-git init
-heroku create
-git add .
-git commit -m "Initial commit"
-git push heroku master
-
